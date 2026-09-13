@@ -54,73 +54,111 @@
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/exe.loader.js";
       var config = {
-        arguments: [],
-        dataUrl: buildUrl + "/exe.data",
-        frameworkUrl: buildUrl + "/exe.framework.js",
-        codeUrl: buildUrl + "/exe.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "rensyuu",
-        productVersion: "1.0",
-        showBanner: unityShowBanner,
-      };
+            arguments: [],
+            dataUrl: buildUrl + "/exe.data",
+            frameworkUrl: buildUrl + "/exe.framework.js",
+            codeUrl: buildUrl + "/exe.wasm",
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "DefaultCompany",
+            productName: "rensyuu",
+            productVersion: "1.0",
+            showBanner: unityShowBanner,
+        };
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
+        // By default, Unity keeps WebGL canvas render target size matched with
+        // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+        // Set this to false if you want to decouple this synchronization from
+        // happening inside the engine, and you would instead like to size up
+        // the canvas DOM size and WebGL render target sizes yourself.
+        // config.matchWebGLToCanvasSize = false;
 
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
+        // If you would like all file writes inside Unity Application.persistentDataPath
+        // directory to automatically persist so that the contents are remembered when
+        // the user revisits the site the next time, uncomment the following line:
+        // config.autoSyncPersistentDataPath = true;
+        // This autosyncing is currently not the default behavior to avoid regressing
+        // existing user projects that might rely on the earlier manual
+        // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
+        // expected to change.
 
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+          // Mobile device style: fill the whole browser client area with the game canvas:
 
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        // ▼ ここに interactive-widget=overlays-content を追加します
-        meta.content = 'width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes, interactive-widget=overlays-content';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        
-        // デフォルトのスマホ用クラスを有効にする
-        document.querySelector("#unity-container").className = "unity-mobile";
-        canvas.className = "unity-mobile";
+          var meta = document.createElement('meta');
+          meta.name = 'viewport';
+          // ▼ ここに interactive-widget=overlays-content を追加します
+          meta.content = 'width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes, interactive-widget=overlays-content';
+          document.getElementsByTagName('head')[0].appendChild(meta);
+          
+          // デフォルトのスマホ用クラスを有効にする
+          document.querySelector("#unity-container").className = "unity-mobile";
+          canvas.className = "unity-mobile";
 
 
-      } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-        canvas.style.width = "1080px";
-        canvas.style.height = "1920px";
+        } else {
+          // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+          canvas.style.width = "1080px";
+          canvas.style.height = "1920px";
+        }
+
+        document.querySelector("#unity-loading-bar").style.display = "block";
+
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+          createUnityInstance(canvas, config, (progress) => {
+            document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+                }).then((unityInstance) => {
+                  document.querySelector("#unity-loading-bar").style.display = "none";
+                  document.querySelector("#unity-fullscreen-button").onclick = () => {
+                    unityInstance.SetFullscreen(1);
+                  };
+
+                }).catch((message) => {
+                  alert(message);
+                });
+              };
+
+        document.body.appendChild(script);
+
+      </script>
+
+      // 【使い方】Unity側から、あるいはHTML側のボタンからこの関数を呼ぶと、バーが出てきてキーボードが開きます
+  function openChatBar() {
+      var bar = document.getElementById('custom-chat-bar');
+      var input = document.getElementById('custom-input-field');
+      
+      bar.style.display = 'flex'; // バーを表示する
+      input.focus();              // 自動的にフォーカスしてキーボードを出す
+  }
+
+  // 送信ボタンを押したときの処理
+  document.getElementById('custom-send-btn').addEventListener('click', function() {
+      submitMessage();
+  });
+
+  // エンターキーを押したときの処理
+  document.getElementById('custom-input-field').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+          submitMessage();
       }
+  });
 
-      document.querySelector("#unity-loading-bar").style.display = "block";
+  // メッセージを確定・送信してバーを消す処理
+  function submitMessage() {
+      var inputField = document.getElementById('custom-input-field');
+      var text = inputField.value;
+      
+      if (text.trim() !== "") {
+          // TODO: ここでUnityに文字を渡す処理を入れる（例: myGameInstance.SendMessage(...)）
+          console.log("送信文字: " + text);
+      }
+      
+      // 入力欄をクリアして、バーを非表示にする
+      inputField.value = "";
+      inputField.blur(); // キーボードを閉じる
+      document.getElementById('custom-chat-bar').style.display = 'none'; // バーを消す
+  }
 
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-
-              }).catch((message) => {
-                alert(message);
-              });
-            };
-
-      document.body.appendChild(script);
-
-    </script>
   </body>
 </html>
