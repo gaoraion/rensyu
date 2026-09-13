@@ -15,7 +15,7 @@ body { padding: 0; margin: 0 }
 #unity-fullscreen-button { cursor:pointer; float: right; width: 38px; height: 38px; background: url('fullscreen-button.png') no-repeat center }
 #unity-warning { position: absolute; left: 50%; top: 5%; transform: translate(-50%); background: white; padding: 10px; display: none }
 
-/* 画面全体（背景を紺色や黒などに設定） */
+/* 画面全体 */
 body {
   margin: 0;
   padding: 0;
@@ -23,32 +23,29 @@ body {
   overflow: hidden;
   width: 100vw;
   height: 100vh;
+  position: fixed; /* ← キーボードによる画面全体の縮小を防ぐために固定 */
+  top: 0;
+  left: 0;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-/* ゲーム全体を囲むコンテナ：スマホの縦長比率（9:16）を維持して中央配置 */
+/* ゲーム全体を囲むコンテナ：横幅（vw）を基準にして9:16を維持する */
 #unity-container {
-  width: 100%;
-  height: 100%;
-  max-width: 56.25vh; /* 9÷16 = 0.5625 (56.25%) */
-  max-height: 177.78vw;
+  width: 100vw;
+  height: calc(100vw * (1920 / 1080)); /* 9:16の比率を高さに強制適用 */
+  max-width: 56.25vh; /* 念のための最大値制限 */
+  max-height: 100vh;
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-/* ゲームのキャンバスを綺麗に収める */
+/* ゲームのキャンバス */
 #unity-canvas {
   width: 100% !important;
   height: 100% !important;
   object-fit: contain;
-}
-
-/* スマホ用クラスが適用されたときの保険 */
-.unity-mobile {
-  width: 100% !important;
-  height: 100% !important;
 }
