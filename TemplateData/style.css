@@ -71,3 +71,9 @@ body {
   width: 100% !important;
   height: 100% !important;
 }
+
+/* Unity WebGLがスマホ用に生成するテキスト入力を手前に表示する */
+input[type=text], input[type=password], textarea, #unity-text-input {
+  z-index: 9999 !important;
+  position: relative !important;
+}
