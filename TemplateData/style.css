@@ -72,21 +72,48 @@ body {
   height: 100% !important;
 }
 
-/* Unityがスマホ用に動的生成するテキスト入力欄を、キーボードの直上に固定して常に見えるようにする */
-#unity-text-input {
+/* Unityがスマホ用に動的生成する隠しテキスト入力欄を強制的に手前に表示させる */
+/* bodyの直下に生成されるケースや、コンテナ内に生成されるケースを想定し、広い範囲で指定 */
+body > input[type=text],
+body > input[type=password],
+body > textarea,
+#unity-text-input,
+[id^=unity-text-input] {
+  /* 位置を画面下部（キーボードの上）に固定 */
   position: fixed !important;
   bottom: 20px !important;
   left: 50% !important;
   transform: translateX(-50%) !important;
+  
+  /* サイズと見た目を調整 */
   width: 80% !important;
   max-width: 400px !important;
   height: 45px !important;
-  background: rgba(0, 0, 0, 0.8) !important;
-  color: white !important;
+  
+  /* 背景色を付けて文字を見やすくする */
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  color: #ffffff !important;
   font-size: 18px !important;
+  font-family: sans-serif !important;
   padding: 10px !important;
+  
+  /* 角丸とボーダー */
   border-radius: 8px !important;
-  border: 1px solid #ffffff !important;
-  z-index: 99999 !important;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  
+  /* 最前面に表示するための設定 */
+  z-index: 2147483647 !important; /* 最大値のz-index */
+  
+  /* 影を付けて浮き上がらせる */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+  
+  /* 入力中は少し大きくする（オプション） */
+  outline: none !important;
+}
+
+/* 入力欄にフォーカスが当たったときのスタイル */
+body > input[type=text]:focus,
+#unity-text-input:focus {
+  border-color: #66afe9 !important;
+  box-shadow: 0 0 8px rgba(102, 175, 233, 0.6), 0 4px 12px rgba(0,0,0,0.5) !important;
 }
