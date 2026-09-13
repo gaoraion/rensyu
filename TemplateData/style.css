@@ -72,8 +72,21 @@ body {
   height: 100% !important;
 }
 
-/* Unity WebGLがスマホ用に生成するテキスト入力を手前に表示する */
-input[type=text], input[type=password], textarea, #unity-text-input {
-  z-index: 9999 !important;
-  position: relative !important;
+/* Unityがスマホ用に動的生成するテキスト入力欄を、キーボードの直上に固定して常に見えるようにする */
+#unity-text-input {
+  position: fixed !important;
+  bottom: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 80% !important;
+  max-width: 400px !important;
+  height: 45px !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+  color: white !important;
+  font-size: 18px !important;
+  padding: 10px !important;
+  border-radius: 8px !important;
+  border: 1px solid #ffffff !important;
+  z-index: 99999 !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
 }
