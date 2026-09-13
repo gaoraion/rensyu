@@ -84,20 +84,24 @@
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         // Mobile device style: fill the whole browser client area with the game canvas:
 
-        // スマホ用：キーボード表示時に画面が押し潰されないように設定
+        // スマホ用：ビューポートの設定
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, initial-scale=1.0, user-scalable=no';
         document.getElementsByTagName('head')[0].appendChild(meta);
 
-        // 強制全画面化を無効化し、PC版と同じように比率を保つ
-        canvas.style.width = "100%";
-        canvas.style.maxWidth = "450px";
-        canvas.style.height = "auto";
-
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
+        // 縦長比率（1080:1920 = 9:16）を固定し、画面内に収める
+        canvas.style.width = "100vw";
+        canvas.style.height = "calc(100vw * (1920 / 1080))";
+        canvas.style.maxHeight = "100vh";
+        canvas.style.maxWidth = "calc(100vh * (1080 / 1920))";
+        canvas.style.display = "block";
+        canvas.style.margin = "auto";
+        canvas.style.position = "absolute";
+        canvas.style.top = "0";
+        canvas.style.bottom = "0";
+        canvas.style.left = "0";
+        canvas.style.right = "0";
 
 
       } else {
