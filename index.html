@@ -86,7 +86,8 @@
 
         var meta = document.createElement('meta');
         meta.name = 'viewport';
-        meta.content = 'width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        // ▼ ここに interactive-widget=overlays-content を追加します
+        meta.content = 'width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes, interactive-widget=overlays-content';
         document.getElementsByTagName('head')[0].appendChild(meta);
         
         // デフォルトのスマホ用クラスを有効にする
