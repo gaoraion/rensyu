@@ -14,7 +14,6 @@ body { padding: 0; margin: 0 }
 #unity-build-title { float: right; margin-right: 10px; line-height: 38px; font-family: arial; font-size: 18px }
 #unity-fullscreen-button { cursor:pointer; float: right; width: 38px; height: 38px; background: url('fullscreen-button.png') no-repeat center }
 #unity-warning { position: absolute; left: 50%; top: 5%; transform: translate(-50%); background: white; padding: 10px; display: none }
-
 /* 1. 画面全体の設定 */
 body {
   margin: 0;
@@ -70,46 +69,4 @@ body {
 .unity-mobile {
   width: 100% !important;
   height: 100% !important;
-}
-
-/* スマホ用メッセージバー（初期状態は非表示） */
-#custom-chat-bar {
-    display: none; /* 最初は隠しておく */
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100vw;
-    height: 60px;
-    background-color: #1a233a;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 0 15px;
-    box-sizing: border-box;
-    z-index: 2147483647;
-}
-
-#custom-input-field {
-    flex: 1;
-    height: 40px;
-    background-color: #ffffff;
-    color: #333333;
-    font-size: 16px;
-    padding: 0 12px;
-    border-radius: 6px;
-    border: none;
-    outline: none;
-}
-
-#custom-send-btn {
-    width: 70px;
-    height: 40px;
-    background-color: #4CAF50;
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
 }
