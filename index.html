@@ -117,6 +117,11 @@
                 // ★ ここを追加！ これにより他のJSファイルから window.unityInstance で操作できるようになります
                 window.unityInstance = unityInstance;
 
+                // ★ ついでに、ここでキューを解放する関数を呼ぶと完璧！
+                if (typeof window.flushMessageQueue === 'function') {
+                    window.flushMessageQueue();
+                }
+
                 document.querySelector("#unity-loading-bar").style.display = "none";
                 document.querySelector("#unity-fullscreen-button").onclick = () => {
                   unityInstance.SetFullscreen(1);

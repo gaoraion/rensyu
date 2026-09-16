@@ -75,8 +75,9 @@ onSnapshot(q, (snapshot) => {
             console.log("【Unity送信】SendMessageを実行します:", messageText);
             window.unityInstance.SendMessage("GameManager", "ReceiveDataFromJS", messageText);
         }else {
-                // まだUnityの準備ができていなければ、箱に溜めておく
-                messageQueue.push(messageText);
+            console.log("【キュー保存】まだUnityの準備ができていないためキューに保存します:", messageText);
+            // まだUnityの準備ができていなければ、箱に溜めておく
+            messageQueue.push(messageText);
         }
     }
   });
@@ -85,10 +86,13 @@ onSnapshot(q, (snapshot) => {
 // Unityのロード完了時（index.html側から呼んでもらう、または定期チェックするなど）に
 // 溜まっていたメッセージを吐き出す関数を用意しておく
 window.flushMessageQueue = function() {
+    console.log("【キュー解放】キューに溜まったメッセージを流します。件数:", messageQueue.length);
     if (window.unityInstance) {
         messageQueue.forEach((text) => {
+            console.log("【Unity送信(キュー)】:", text);
             window.unityInstance.SendMessage("GameManager", "ReceiveDataFromJS", text);
         });
         messageQueue = []; // 箱を空にする
+        console.warn("【警告】unityInstanceがまだ存在しません");
     }
 };
