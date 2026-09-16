@@ -85,15 +85,3 @@ window.flushMessageQueue = function() {
         messageQueue = []; // 箱を空にする
     }
 };
-
-.then((unityInstance) => {
-    window.unityInstance = unityInstance;
-
-    // ★ 溜まっていたメッセージをUnityに流し込む！
-    if (window.flushMessageQueue) {
-        window.flushMessageQueue();
-    }
-
-    document.querySelector("#unity-loading-bar").style.display = "none";
-    // ...
-})
