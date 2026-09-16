@@ -36,7 +36,7 @@ window.saveScoreToDatabase = async function(jsonData) {
         await addDoc(messagesRef, {
             playerName: data.userId,
             score: data.score,
-            createdAt: serverTimestamp();
+            createdAt: serverTimestamp()
         });
 
         
