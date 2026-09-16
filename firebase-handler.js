@@ -63,12 +63,16 @@ onSnapshot(q, (snapshot) => {
         // 新しく追加されたデータを取得
         const messageData = change.doc.data();
         const messageText = messageData.message; // 例：メッセージのテキストフィールド
+    
+        console.log("【受信】新しいメッセージを検知:", messageText);
+
 
         // ここでUnityへ送信！
         // 第1引数: シーン内にある、スクリプトがアタッチされている「ゲームオブジェクトの名前」
         // 第2引数: 呼び出したいC#の「関数名」
         // 第3引数: 送りたい文字列データ
         if (window.unityInstance) {
+            console.log("【Unity送信】SendMessageを実行します:", messageText);
             window.unityInstance.SendMessage("GameManager", "ReceiveDataFromJS", messageText);
         }else {
                 // まだUnityの準備ができていなければ、箱に溜めておく
