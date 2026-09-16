@@ -52,7 +52,7 @@ window.saveScoreToDatabase = async function(jsonData) {
 // データベースのメッセージを監視
 
 const messagesRef = collection(db, "rooms", "room_abc", "messages");
-const q = query(messagesRef, orderBy("createdAt", "asc"));
+const q = query(messagesRef, orderBy("createdAt"));
 // 一時的にメッセージを溜めておく箱
 let messageQueue = [];
 
