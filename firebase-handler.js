@@ -35,7 +35,8 @@ window.saveScoreToDatabase = async function(jsonData) {
         const messagesRef = collection(db, "rooms", "room_abc", "messages");
         await addDoc(messagesRef, {
             playerName: data.userId,
-            score: data.score,
+            host_or_guest: data.host,
+            message: data.message,
             createdAt: serverTimestamp()
         });
 
