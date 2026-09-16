@@ -50,7 +50,8 @@ window.saveScoreToDatabase = async function(jsonData) {
 
 const messagesRef = collection(db, "rooms", "room_abc", "messages");
 const q = query(messagesRef, orderBy("createdAt", "asc"));
-
+// 一時的にメッセージを溜めておく箱
+let messageQueue = [];
 
 onSnapshot(q, (snapshot) => {
   // .docChanges() を使うと、変更があったもの (追加・変更・削除) だけを抜き出せる
@@ -66,7 +67,33 @@ onSnapshot(q, (snapshot) => {
         // 第3引数: 送りたい文字列データ
         if (window.unityInstance) {
             window.unityInstance.SendMessage("GameManager", "ReceiveDataFromJS", messageText);
-        }    
+        }else {
+                // まだUnityの準備ができていなければ、箱に溜めておく
+                messageQueue.push(messageText);
+        }
     }
   });
 });
+
+// Unityのロード完了時（index.html側から呼んでもらう、または定期チェックするなど）に
+// 溜まっていたメッセージを吐き出す関数を用意しておく
+window.flushMessageQueue = function() {
+    if (window.unityInstance) {
+        messageQueue.forEach((text) => {
+            window.unityInstance.SendMessage("GameManager", "ReceiveDataFromJS", text);
+        });
+        messageQueue = []; // 箱を空にする
+    }
+};
+
+.then((unityInstance) => {
+    window.unityInstance = unityInstance;
+
+    // ★ 溜まっていたメッセージをUnityに流し込む！
+    if (window.flushMessageQueue) {
+        window.flushMessageQueue();
+    }
+
+    document.querySelector("#unity-loading-bar").style.display = "none";
+    // ...
+})
