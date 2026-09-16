@@ -64,7 +64,9 @@ onSnapshot(q, (snapshot) => {
         // 第1引数: シーン内にある、スクリプトがアタッチされている「ゲームオブジェクトの名前」
         // 第2引数: 呼び出したいC#の「関数名」
         // 第3引数: 送りたい文字列データ
-        unityInstance.SendMessage("GameManager", "ReceiveDataFromJS", messageText);
+        if (window.unityInstance) {
+            window.unityInstance.SendMessage("GameManager", "ReceiveDataFromJS", messageText);
+        }    
     }
   });
 });
