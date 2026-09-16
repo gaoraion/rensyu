@@ -22,27 +22,27 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// サブコレクションを作りたい
 window.saveScoreToDatabase = async function(jsonData) {
-
-
-    
-
 
     try {
         const data = JSON.parse(jsonData);
         console.log("C#からデータを受け取りました:", data);
 
-        // 例: Firebase Firestore等を使ってデータベースに保存
-        // await setDoc(doc(db, "scores", data.userId), { score: data.score });
-        await addDoc(collection(db, "lobby"), {
+
+
+        // 1. リアルタイムリスナーのセットアップ (onSnapshot)
+        const messagesRef = collection(db, "rooms", "room_abc", "messages");
+        await addDoc(messagesRef, {
             playerName: data.userId,
             score: data.score,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp();
         });
 
+        
 
 
-        console.log("データベースへの保存が完了しました！");
+        
     } catch (error) {
         console.error("エラーが発生しました:", error);
     }
