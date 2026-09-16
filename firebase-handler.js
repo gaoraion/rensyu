@@ -39,12 +39,29 @@ window.saveScoreToDatabase = async function(jsonData) {
             message: data.message,
             createdAt: serverTimestamp()
         });
-
         
-
-
         
     } catch (error) {
         console.error("エラーが発生しました:", error);
     }
 };
+
+// データベースのメッセージを監視
+
+const messagesRef = collection(db, "rooms", "room_abc", "messages");
+const q = query(messagesRef, orderBy("createdAt", "asc"));
+
+
+onSnapshot(q, (snapshot) => {
+  // .docChanges() を使うと、変更があったもの (追加・変更・削除) だけを抜き出せる
+  snapshot.docChanges().forEach((change) => {
+    if (change.type === "added") {
+        // 新しく追加されたデータを取得
+        const messageData = change.doc.data();
+        const messageText = messageData.message; // 例：メッセージのテキストフィールド
+
+        // ここでUnityへ送信！
+        unityInstance.SendMessage("GameManager", "ReceiveDataFromJS", messageText);
+    }
+  });
+});
