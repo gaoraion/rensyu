@@ -5,6 +5,8 @@ import {
     collection,
     addDoc,
     query,
+    orderBy,          // ← これを追加！
+    onSnapshot,       // ← これを追加！
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
