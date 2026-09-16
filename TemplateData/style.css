@@ -14,3 +14,59 @@ body { padding: 0; margin: 0 }
 #unity-build-title { float: right; margin-right: 10px; line-height: 38px; font-family: arial; font-size: 18px }
 #unity-fullscreen-button { cursor:pointer; float: right; width: 38px; height: 38px; background: url('fullscreen-button.png') no-repeat center }
 #unity-warning { position: absolute; left: 50%; top: 5%; transform: translate(-50%); background: white; padding: 10px; display: none }
+/* 1. 画面全体の設定 */
+body {
+  margin: 0;
+  padding: 0;
+  background: #1a233a; /* 背景色 */
+  overflow: hidden; /* スクロール禁止 */
+  
+  /* 重要：画面全体を固定し、ブラウザのキーボード連動リサイズを無効化する */
+  width: 100vw;
+  height: 100vh;
+  position: fixed; 
+  top: 0;
+  left: 0;
+  
+  /* フレックスボックスで中身を中央寄せ */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  /* （iOS対策）body自体に固定サイズを持たせることでリサイズを防ぐ試み */
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* 2. ゲームコンテナの設定：縦長比率を維持して中央配置 */
+#unity-container {
+  position: relative;
+  
+  /* 縦横比（9:16 = 56.25%）を維持するためのテクニック */
+  width: 100vw; 
+  height: calc(100vw * (1920 / 1080)); /* 縦の長さを強制計算 */
+  
+  /* 画面からはみ出ないように最大値を設定 */
+  max-width: 56.25vh;
+  max-height: 100vh;
+  
+  /* コンテナ自体も中央配置 */
+  margin: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 3. ゲームキャンバスの設定：コンテナいっぱいに表示 */
+#unity-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain; /* 比率を保ったまま収める */
+  display: block;
+}
+
+/* 4. スマホ用クラスの設定（念のため） */
+.unity-mobile {
+  width: 100% !important;
+  height: 100% !important;
+}
