@@ -5,8 +5,8 @@ import {
     collection,
     addDoc,
     query,
-    orderBy,          // ← これを追加！
-    onSnapshot,       // ← これを追加！
+    orderBy,
+    onSnapshot,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -25,16 +25,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// サブコレクションを作りたい
+// C#でメッセージを送信した時の処理
 window.saveScoreToDatabase = async function(jsonData) {
 
     try {
         const data = JSON.parse(jsonData);
         console.log("C#からデータを受け取りました:", data);
 
-
-
-        // 1. リアルタイムリスナーのセットアップ (onSnapshot)
+        // サブコレクションにメッセージを記録
         const messagesRef = collection(db, "rooms", "room_abc", "messages");
         await addDoc(messagesRef, {
             playerName: data.userId,
@@ -49,31 +47,31 @@ window.saveScoreToDatabase = async function(jsonData) {
     }
 };
 
-// データベースのメッセージを監視
 
+// データベースでメッセージが記録されたときの処理
 const messagesRef = collection(db, "rooms", "room_abc", "messages");
 const q = query(messagesRef, orderBy("createdAt"));
-// 一時的にメッセージを溜めておく箱
-let messageQueue = [];
+let messageQueue = []; // 一時的にメッセージを溜めておく箱
 
+// データベースを監視して新規メッセージを検知すればC#の関数を呼び出す
 onSnapshot(q, (snapshot) => {
-  // .docChanges() を使うと、変更があったもの (追加・変更・削除) だけを抜き出せる
+
   snapshot.docChanges().forEach((change) => {
     if (change.type === "added") {
-        // 新しく追加されたデータを取得
+        
         const messageData = change.doc.data();
-        const messageText = messageData.message; // 例：メッセージのテキストフィールド
+        const messageText = messageData.message;
     
         console.log("【受信】新しいメッセージを検知:", messageText);
 
 
-        // ここでUnityへ送信！
-        // 第1引数: シーン内にある、スクリプトがアタッチされている「ゲームオブジェクトの名前」
-        // 第2引数: 呼び出したいC#の「関数名」
-        // 第3引数: 送りたい文字列データ
+        // jsからC#の関数を呼び出す
+        // 第1引数: オブジェクト名
+        // 第2引数: スクリプト内の関数名
+        // 第3引数: 引数にしたい文字列
         if (window.unityInstance) {
             console.log("【Unity送信】SendMessageを実行します:", messageText);
-            window.unityInstance.SendMessage("GameManager", "ReceiveDataFromJS", messageText);
+            window.unityInstance.SendMessage("ScrollViewManager", "ReceiveDataFromJS", messageText);
         }else {
             console.log("【キュー保存】まだUnityの準備ができていないためキューに保存します:", messageText);
             // まだUnityの準備ができていなければ、箱に溜めておく
@@ -90,7 +88,7 @@ window.flushMessageQueue = function() {
     if (window.unityInstance) {
         messageQueue.forEach((text) => {
             console.log("【Unity送信(キュー)】:", text);
-            window.unityInstance.SendMessage("GameManager", "ReceiveDataFromJS", text);
+            window.unityInstance.SendMessage("ScrollViewManager", "ReceiveDataFromJS", text);
         });
         messageQueue = []; // 箱を空にする
         console.warn("【警告】unityInstanceがまだ存在しません");
