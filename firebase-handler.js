@@ -92,6 +92,14 @@ let unsubscribe_Lobby = null; // リスナーを解除するための変数
 // Lobbyシーンに入ったときにUnityから呼び出される関数を定義
 window.startLobbyListener = function() {
 
+    console.log("startLobbyListener が呼び出されました！");
+    
+    // すでにリスナーが動いている場合は、重複を防ぐために一度解除するなどの処理をここに書くと安心です
+    if (unsubscribe_Lobby != null) {
+        unsubscribe_Lobby();
+        unsubscribe_Lobby = null;
+    }
+
     // すでに監視中なら二重登録を防ぐために何もしない
     if (unsubscribe_Lobby) return;
 
@@ -124,6 +132,7 @@ window.startLobbyListener = function() {
         });
     });
 };
+
 
 window.stopLobbyListener = function() {
     if (unsubscribe_Lobby) { // ←もし監視中（unsubscribeに中身が入っている）なら実行する
@@ -202,12 +211,9 @@ window.flushMessageQueue = function() {
     }
 };
 
-// ★ これを必ず書く！（外の世界の window に公開する）
-window.joinRoom = joinRoom;
-
 // トリガー：ロビー画面の入室ボタン押下
 // 内容：入室可能であるかトランザクション処理で判断する
-async function joinRoom(jsonData) {
+window.joinRoom = async function(jsonData) {
 
     console.log("届いた生データ ->", jsonData);
 
