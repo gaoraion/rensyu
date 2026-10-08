@@ -9,7 +9,10 @@ import {
     query,
     orderBy,
     onSnapshot,
-    serverTimestamp
+    serverTimestamp,
+    deleteDoc,
+    updateDoc,
+    setDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 
@@ -51,7 +54,9 @@ window.saveScoreToDatabase = async function(jsonData) {
 };
 
 // ロビー画面の部屋作成ボタンでデータベースを作成
-window.createRoom = async function() {
+window.createRoom = async function(userId) {
+
+    console.log("window.createRoomのuserId：" + userId);
 
     try {
         const roomRef = await addDoc(collection(db, "rooms"), {
@@ -59,11 +64,12 @@ window.createRoom = async function() {
             theme: "朝食はパン派 vs ごはん派",
             currentTurn: 1,
             activeSpeaker:"たかし",
-            hostName:"たかし", // 部屋を作った人の名前
+            hostName: userId, // 部屋を作った人の名前
             guestName: null,  // 参加者の名前（最初は誰もいないので null）
             playerCount: 1,
             maxPlayers: 2,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            turnEndAt: null,
         });
 
         console.log("jsのコメント" + roomRef.id);
@@ -111,10 +117,18 @@ window.startLobbyListener = function() {
     // データベースを監視して新規メッセージを検知
     unsubscribe_Lobby = onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
-            if (change.type === "added") {
-                const Data = change.doc.data();
-                const docId = change.doc.id;
 
+            const Data = change.doc.data();
+            const docId = change.doc.id;
+
+            if(change.type === "added" && recentlyDeletedIds.has(docId))
+            {
+                console.log("自分で削除したドキュメントのため、生成をスキップします：", docId);
+                return;
+            }
+
+            if (change.type === "added") {
+                
                 const jsonString = JSON.stringify({
                     id: docId,
                     hostName: Data.hostName,
@@ -129,6 +143,21 @@ window.startLobbyListener = function() {
                     window.unityInstance.SendMessage("ScrollViewManager", "ReceiveLobbyDispDataFromJS", jsonString);
                 }
             }
+
+            if (change.type === "modified") {
+                const jsonString = JSON.stringify({
+                    id: docId,
+                    hostName: Data.hostName,
+                    playerCount: Data.playerCount,
+                    maxPlayers: Data.maxPlayers,
+                    status: Data.status
+                });
+                
+                if (window.unityInstance) {
+                    console.log("Lobbyのオブジェクトを更新！！");
+                    window.unityInstance.SendMessage("Content", "UpdatePackageInfoNotify", jsonString);
+                }
+            }
         });
     });
 };
@@ -138,12 +167,14 @@ window.stopLobbyListener = function() {
     if (unsubscribe_Lobby) { // ←もし監視中（unsubscribeに中身が入っている）なら実行する
         unsubscribe_Lobby(); 
         unsubscribe_Lobby = null;
-        console.log("Roomシーンの監視を終了しました");
+        console.log("Lobbyシーンの監視を終了しました");
     }
     // 監視していなければ（unsubscribeがnullなら）、ここをスルーするのでエラーにならない！
 };
 
-let unsubscribe = null; // リスナーを解除するための変数
+let unsubscribeMessages = null; // メッセージ監視解除用
+let unsubscribeTimer = null;    // タイマー監視解除用
+let unsubscribeStatus = null;    // ステータス監視解除用
 
 // データベースでメッセージが記録されたときの処理
 // Roomシーンに入ったときにUnityから呼び出される関数を定義
@@ -152,17 +183,15 @@ window.startRoomListener = function(roomId) {
     console.log("window.startRoomListener：これは呼ばれた");
     
     // すでに監視中なら二重登録を防ぐために何もしない
-    if (unsubscribe) return;
+    if (unsubscribeMessages || unsubscribeTimer) return;
 
+    // メッセージの監視
     console.log("Roomシーンの監視を開始します" + roomId);
-
-    
     const messagesRef = collection(db, "rooms", roomId, "messages");
     const q = query(messagesRef, orderBy("createdAt"));
 
-    
     // データベースを監視して新規メッセージを検知
-    unsubscribe = onSnapshot(q, (snapshot) => {
+    unsubscribeMessages = onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
                 const Data = change.doc.data();
@@ -172,22 +201,69 @@ window.startRoomListener = function(roomId) {
                 });
 
                 if (window.unityInstance) {
-
                     console.log("Roomにオブジェクト生成！！");
                     window.unityInstance.SendMessage("ScrollViewManager", "ReceiveDataFromJS", jsonString);
                 }
             }
         });
     });
+
+    // ルーム情報の参照
+    const roomRef = doc(db, "rooms", roomId);
+
+    // タイマーとステータスの監視を1つにまとめる
+    unsubscribeTimer = onSnapshot(roomRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const turnEndAt = data.turnEndAt;
+            const currentStatus = data.status; // ステータスを取得
+
+            // 1. ターンエンド時刻の検知
+            if (turnEndAt) {
+                console.log("DBから新しいturnEndAtを検知:", turnEndAt);
+
+                if (window.unityInstance) {
+                    window.unityInstance.SendMessage("TimerManager", "ReceiveTurnEndAt", turnEndAt.toString());
+                }
+            }   
+
+            // 2. ステータスが "playing" になったときの処理
+            // ※必要に応じて条件（ステータスが切り替わった瞬間など）を調整してください
+            if (currentStatus === "playing") {
+                const jsonString = JSON.stringify({
+                    id: docSnap.id,
+                    hostName: data.hostName,
+                    playerCount: data.playerCount,
+                    maxPlayers: data.maxPlayers,
+                    status: data.status
+                });
+
+                if (window.unityInstance) {
+                    console.log("DBのステータスが playing に更新された");
+                    window.unityInstance.SendMessage("RoomManager", "GameStart", jsonString);
+                }
+            }
+        }
+    });
 };
 
 window.stopRoomListener = function() {
-    if (unsubscribe) { // ←もし監視中（unsubscribeに中身が入っている）なら実行する
-        unsubscribe(); 
-        unsubscribe = null;
-        console.log("Roomシーンの監視を終了しました");
+    if (unsubscribeMessages) {
+        unsubscribeMessages(); 
+        unsubscribeMessages = null;
     }
-    // 監視していなければ（unsubscribeがnullなら）、ここをスルーするのでエラーにならない！
+    // タイマーの監視を解除
+    if (unsubscribeTimer) {
+        unsubscribeTimer(); 
+        unsubscribeTimer = null;
+    }
+
+    // タイマーの監視を解除
+    if (unsubscribeStatus) {
+        unsubscribeStatus(); 
+        unsubscribeStatus = null;
+    }
+    console.log("Roomシーンの監視を終了しました");
 };
 
 
@@ -226,29 +302,29 @@ window.joinRoom = async function(jsonData) {
     console.log("joinRoomが呼ばれた！ パース成功:", data);
 
     try {
-        // ★ 修正①：第1引数に db を渡す
+
         await runTransaction(db, async (transaction) => {
 
-            // ★ 修正②：data.roomId に修正（スペルミス解消）
             const roomRef = doc(db, "rooms", data.roomId);
             
             const roomDoc = await transaction.get(roomRef);
 
-            // ★ 修正③：.exists() にカッコをつける
             if (!roomDoc.exists()) {
                 throw new Error("部屋が存在しません。");
             }
 
             const currentGuest = roomDoc.data().guestName;
 
+            // ゲストが居れば入室不可
             if (currentGuest) {
                 throw new Error("部屋はすでに満員です。");
             }
 
-            // ★ 修正④：data.userId に修正
-            // 空白であれば書き込みを実行（ドキュメントからguestNameを探して上書き）
+            // ドキュメントに書き込みを実行
             transaction.update(roomRef, {
-                guestName: data.userId
+                guestName: data.userId,
+                playerCount: 2,
+                status: "playing"
             });
         });
 
@@ -270,3 +346,84 @@ window.joinRoom = async function(jsonData) {
         }
     }
 }
+
+const recentlyDeletedIds = new Set(); // 削除した部屋をロビー画面に出さないガード処理のため
+
+window.deleteRoom = async function(roomId) {
+
+    console.log("window.deleteRoom：これは呼ばれた");
+    console.log("除外リストに登録" + roomId);
+
+    recentlyDeletedIds.add(roomId);
+
+    try {
+        // 削除したいドキュメントの参照を作成
+        const docRef = doc(db, "rooms", roomId);
+        
+        // ドキュメントを削除
+        await deleteDoc(docRef);
+
+        console.log("ドキュメントが正常に削除されました:", roomId);
+    } catch (error) {
+        console.error("ドキュメントの削除に失敗しました: ", error);
+        recentlyDeletedIds.delete(roomId);
+    }
+}
+
+// トリガー：スペースキー押下　TimerManager.cs
+// 内容：firestore→roomsのturnEndAtの書き込み
+// 　　　タイマーの開始
+window.setTurnEndAt = async function(roomId) {
+
+    console.log("window.setTurnEndAt：これは呼ばれた");
+
+    // ドキュメントの参照を作成
+    const docRef = doc(db, "rooms", roomId);
+
+    // 現在の時刻（ミリ秒）に60秒（60000ミリ秒）を足して、ターン終了時刻を作る
+    const newEndTime = Date.now() + 60 * 1000;
+
+    console.log("設定する終了時刻:", newEndTime);
+
+    // setDocの読み込み不可をさせないために、turnEndAtを作り始めて必ず書き込めるようにする
+    await setDoc(docRef, {
+        turnEndAt: newEndTime
+    }, { merge: true });
+}
+
+// roomIdを受け取って存在確認を行う関数
+async function checkRoomExistsAndHandle(roomId) {
+    try {
+        // rooms コレクションの中の roomId ドキュメントの参照を取得
+        const roomRef = doc(db, "rooms", roomId);
+        const roomSnap = await getDoc(roomRef);
+
+        // ドキュメントが存在するかチェック
+        if (roomSnap.exists()) {
+            console.log("ルームが見つかりました:", roomId);
+            
+            await updateDoc(roomRef, {
+                status: "playing"
+            });
+
+        } else {
+            console.log("ルームが見つかりませんでした。退室処理を実行します。");
+            
+            // 見つからなかった場合に呼び出したい退室関数を実行
+            if (window.unityInstance) {
+                window.unityInstance.SendMessage("RoomManager", "exitRoom");
+            }
+        }      
+
+    } catch (error) {
+        console.error("ルーム確認中にエラーが発生しました:", error);
+
+        // 見つからなかった場合に呼び出したい退室関数を実行
+        if (window.unityInstance) {
+            window.unityInstance.SendMessage("RoomManager", "exitRoom");
+        }
+    }
+}
+
+
+
