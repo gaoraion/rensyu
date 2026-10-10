@@ -12,7 +12,8 @@ import {
     serverTimestamp,
     deleteDoc,
     updateDoc,
-    setDoc
+    setDoc,
+    getDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 
@@ -61,15 +62,15 @@ window.createRoom = async function(userId) {
     try {
         const roomRef = await addDoc(collection(db, "rooms"), {
             status: "waiting",
-            theme: "朝食はパン派 vs ごはん派",
+            theme: "",
             currentTurn: 1,
-            activeSpeaker:"たかし",
+            activeSpeaker:"",
             hostName: userId, // 部屋を作った人の名前
             guestName: null,  // 参加者の名前（最初は誰もいないので null）
-            playerCount: 1,
+            playerCount: 1,   // 
             maxPlayers: 2,
             createdAt: serverTimestamp(),
-            turnEndAt: null,
+            turnEndAt: null, // タイマーの終了時刻
         });
 
         console.log("jsのコメント" + roomRef.id);
@@ -145,6 +146,7 @@ window.startLobbyListener = function() {
             }
 
             if (change.type === "modified") {
+
                 const jsonString = JSON.stringify({
                     id: docId,
                     hostName: Data.hostName,
@@ -152,7 +154,16 @@ window.startLobbyListener = function() {
                     maxPlayers: Data.maxPlayers,
                     status: Data.status
                 });
+
+                const jsonData = JSON.stringify(Data);
+
+                // 共有データを更新
+                if (window.unityInstance) {
+                    console.log("Lobbyのオブジェクトを更新！！");
+                    window.unityInstance.SendMessage("GameManager", "UpdateShareGameDataNotify", jsonData);
+                }
                 
+                // パッケージのUIをリアルタイムで更新
                 if (window.unityInstance) {
                     console.log("Lobbyのオブジェクトを更新！！");
                     window.unityInstance.SendMessage("Content", "UpdatePackageInfoNotify", jsonString);
@@ -185,12 +196,12 @@ window.startRoomListener = function(roomId) {
     // すでに監視中なら二重登録を防ぐために何もしない
     if (unsubscribeMessages || unsubscribeTimer) return;
 
-    // メッセージの監視
+    // メッセージの追加を監視
     console.log("Roomシーンの監視を開始します" + roomId);
     const messagesRef = collection(db, "rooms", roomId, "messages");
     const q = query(messagesRef, orderBy("createdAt"));
 
-    // データベースを監視して新規メッセージを検知
+    // データベースの新規メッセージを検知
     unsubscribeMessages = onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
@@ -208,24 +219,32 @@ window.startRoomListener = function(roomId) {
         });
     });
 
-    // ルーム情報の参照
+    // ルーム情報の更新を監視
     const roomRef = doc(db, "rooms", roomId);
 
-    // タイマーとステータスの監視を1つにまとめる
+    // ドキュメントのパラメーターの更新を検知
     unsubscribeTimer = onSnapshot(roomRef, (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
             const turnEndAt = data.turnEndAt;
             const currentStatus = data.status; // ステータスを取得
 
-            // 1. ターンエンド時刻の検知
+            // ターンエンド時刻の更新を検知
             if (turnEndAt) {
                 console.log("DBから新しいturnEndAtを検知:", turnEndAt);
 
                 if (window.unityInstance) {
                     window.unityInstance.SendMessage("TimerManager", "ReceiveTurnEndAt", turnEndAt.toString());
                 }
-            }   
+            }
+
+            const jsonData = JSON.stringify(data);
+
+            // 共有データを更新
+            if (window.unityInstance) {
+                console.log("Lobbyのオブジェクトを更新！！");
+                window.unityInstance.SendMessage("GameManager", "UpdateShareGameDataNotify", jsonData);
+            }
 
             // 2. ステータスが "playing" になったときの処理
             // ※必要に応じて条件（ステータスが切り替わった瞬間など）を調整してください
@@ -391,8 +410,11 @@ window.setTurnEndAt = async function(roomId) {
     }, { merge: true });
 }
 
-// roomIdを受け取って存在確認を行う関数
-async function checkRoomExistsAndHandle(roomId) {
+// トリガー：RoomManager.csのスタート関数（ゲストのみ）
+// 内容：部屋画面でホストが退出ボタン押下、ロビー画面でゲストが入室ボタン押下を同時にした場合
+//       ゲストをロビー画面へ強制退室させる
+//       ゲストが入室したらstatusをplayingにしてStartRoomListenerで検知する
+window.checkRoomExistsAndHandle = async function(roomId) {
     try {
         // rooms コレクションの中の roomId ドキュメントの参照を取得
         const roomRef = doc(db, "rooms", roomId);
@@ -422,6 +444,37 @@ async function checkRoomExistsAndHandle(roomId) {
         if (window.unityInstance) {
             window.unityInstance.SendMessage("RoomManager", "exitRoom");
         }
+    }
+}
+
+// ShareGameDataを更新したいときに、DBからデータを取得するときに使う
+window.FetchDataFromDB = async function(roomId) {
+
+    console.log("window.FetchDataFromDB：これは呼ばれた");
+
+    try {
+        // 削除したいドキュメントの参照を作成
+        const docRef = doc(db, "rooms", roomId);
+        const roomSnap = await getDoc(roomRef);
+
+        if (roomSnap.exists()) {
+
+            // 2. roomSnap.data() でドキュメントのフィールドデータを取得
+            const roomData = roomSnap.data();
+
+            // Unityに渡すためにJSON文字列に変換（オブジェクトのままだとUnity側で扱いにくいため）
+            const jsonData = JSON.stringify(roomData);
+
+            if (window.unityInstance) {
+                window.unityInstance.SendMessage("RoomManager", "SharedGameDataDo", roomData);
+            }
+
+            console.log("ドキュメント情報を渡しました:", roomId);
+        } else {
+            console.log("指定されたルームが存在しません:", roomId);
+        }
+    } catch (error) {
+        console.error("ドキュメント情報の譲渡に失敗しました: ", error); 
     }
 }
 
